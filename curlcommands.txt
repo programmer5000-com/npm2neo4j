@@ -1,0 +1,2 @@
+curl -H "Content-Type: application/json" https://skimdb.npmjs.com/registry/_all_docs
+curl -H "Content-Type: application/json" https://skimdb.npmjs.com/registry/babel
