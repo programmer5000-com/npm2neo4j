@@ -109,7 +109,7 @@ const padTo50 = str => {
 		const resultPromise = session.run(
 			string,
 			obj);
-		Promise.race([resultPromise, new Promise((_, reject) => setTimeout(() => reject("timeout"), 15000))]).then(() => {
+		resultPromise.then(() => {
 			log("Uploaded package", moduleName);
 			lastUploaded = moduleName;
 			numUploaded ++;
