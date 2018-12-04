@@ -70,7 +70,7 @@ const padTo50 = str => {
 	const downloadModule = async function (moduleName){
 		waiting --;
 		numOpen ++;
-		log("Processing package");
+		log("Processing package", moduleName);
 		lastUploadStart = moduleName;
 		const resp = await fetch("https://skimdb.npmjs.com/registry/" + encodeURIComponent(moduleName));
 		const module = await resp.json();
