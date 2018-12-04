@@ -1,5 +1,6 @@
 {
 	"url": "bolt://52.23.245.35:34519",
 	"username": "neo4j",
-	"password": "component-implementation-fence"
+	"password": "component-implementation-fence",
+	"max_lines": 5
 }

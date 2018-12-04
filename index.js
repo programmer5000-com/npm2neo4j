@@ -1,7 +1,7 @@
-const MAX_LINES = 5;
 const fetch = require("node-fetch");
 const neo4j = require("neo4j-driver").v1;
 const config = require("./config.json");
+const MAX_LINES = config.max_lines || Infinity;
 const driver = neo4j.driver(config.url, neo4j.auth.basic(config.username, config.password), {disableLosslessIntegers: true});
 const session = driver.session();
 
