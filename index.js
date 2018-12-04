@@ -1,6 +1,7 @@
 process.on('warning', e => console.warn(e.stack));
 
 const fetch = require("node-fetch");
+const chalk = require("chalk");
 const neo4j = require("neo4j-driver").v1;
 const config = require("./config.json");
 const MAX_LINES = config.max_lines > 0 ? config.max_lines : Infinity;
@@ -8,6 +9,13 @@ const driver = neo4j.driver(config.url, neo4j.auth.basic(config.username, config
 const session = driver.session();
 let numOpen = 0;
 let done = false;
+
+// metrics
+let numUploaded = 0;
+let numErrors = 0;
+let lastUploadStart = "";
+let lastUploaded = "";
+
 
 const properties = [
 	[data => data.users || (data.maintainers && data.maintainers[0] && data.maintainers[0].name), "author"],
@@ -23,18 +31,23 @@ const properties = [
 ];
 
 (async function (){
-	console.log("starting...");
+	let backlog = [];
+	const log = (...stuff) => {
+		console.log(...stuff);
+	};
+
+	log("starting...");
 	let lineBuffer = "";
 	const resp = await fetch("https://skimdb.npmjs.com/registry/_all_docs");
-	console.log("fetched");
+	log("fetched");
 	const stream = resp.body;
 
 	let firstLine = false;
-	let count = 0;
+	let linesRead = 0;
 	const procLine = line => {
 		if(!firstLine) return firstLine = true;
-		count ++;
-		if(count > MAX_LINES){
+		linesRead ++;
+		if(linesRead > MAX_LINES){
 			done = true;
 			return;
 		}
@@ -49,7 +62,8 @@ const properties = [
 	};
 
 	const downloadModule = async function (moduleName){
-		console.log("processing module", moduleName);
+		log("processing module", moduleName);
+		lastUploadStart = moduleName;
 		const resp = await fetch("https://skimdb.npmjs.com/registry/" + encodeURIComponent(moduleName));
 		const module = await resp.json();
 
@@ -82,13 +96,16 @@ RETURN a`;
 		const resultPromise = session.run(
 		  string,
 		  obj);
-		resultPromise.then(result => {
+		Promise.race([resultPromise, new Promise((_, reject) => setTimeout(() => reject("timeout"), 15000))]).then(result => {
 		  const singleRecord = result.records[0];
 		  const node = singleRecord.get(0);
-		  console.log("Uploaded package", moduleName);
+		  log("Uploaded package", moduleName);
+			lastUploaded = moduleName;
+			numUploaded ++;
 			procEnd();
 		}).catch(e => {
-			console.error(e, string, obj, module.keywords);
+			numErrors ++;
+			console.error(chalk.bgRedBright("\n\n================ COULD NOT UPLOAD, FAILED WITH ERROR: ================\n"), e, chalk.bgRedBright("\nQUERY"), string, chalk.bgRedBright("\nMODULE"), obj);
 			procEnd();
 		});
 
@@ -97,6 +114,7 @@ RETURN a`;
 				console.log("done!");
 				session.close();
 				driver.close();
+				showStatus();
 				setImmediate(process.exit);
 			}
 			else numOpen --;
@@ -119,4 +137,16 @@ RETURN a`;
 		procLine(lineBuffer);
 		done = true;
 	});
+
+	const showStatus = () => {
+		const line = chalk`{bold {gray ${(new Date).toString()}}\tErrors: {red ${numErrors}}\tUploaded: {green ${numUploaded}}\tUploading: {cyan ${numOpen}}\tLines read: {magenta ${linesRead}}\tMost recent upload started: {blue ${lastUploadStart}}\tMost recent successful upload: {yellow ${lastUploaded}}}`;
+		console.error(line);
+	};
+
+	setInterval(showStatus, config.statusIntervalMs || 10000);
+
+	const stdin = process.stdin;
+	// stdin.resume();
+	stdin.setEncoding("utf8");
+	stdin.on("data", showStatus);
 })();
