@@ -40,6 +40,7 @@ const properties = [
 		}
 
 		if(line[line.length - 1] === ","){
+			numOpen ++;
 			line = line.slice(0, -1);
 			const module = JSON.parse(line);
 			moduleName = module.key;
@@ -81,7 +82,6 @@ RETURN a`;
 		const resultPromise = session.run(
 		  string,
 		  obj);
-		numOpen ++;
 		resultPromise.then(result => {
 		  const singleRecord = result.records[0];
 		  const node = singleRecord.get(0);
@@ -116,7 +116,7 @@ RETURN a`;
 		lineBuffer = data.slice(-1)[0];
 	});
 	stream.on("close", () => {
-		done = true;
 		procLine(lineBuffer);
+		done = true;
 	});
 })();
