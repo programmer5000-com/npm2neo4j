@@ -21,7 +21,7 @@ let lastUploaded = "";
 let waiting = 0;
 
 const properties = [
-	[data => data.users || (data.maintainers && data.maintainers[0] && data.maintainers[0].name), "author"],
+	[data => (data.author && data.author.name) || (data.maintainers && data.maintainers[0] && data.maintainers[0].name), "author"],
 	[data => data.bugs && data.bugs.url, "bugs"],
 	"description",
 	"homepage",
@@ -99,12 +99,12 @@ const padTo50 = str => {
 		//module.maintainers.forEach();
 
 		const string = `MERGE (a:Package { name: $name }) SET ${setString}
-		` + dependencies.length ? `
+		` + (dependencies.length ? `
 		WITH a as a
 		FOREACH (r IN $dependencies |
 			MERGE (p:Package { name : r[0] })
 			CREATE (a)-[e:DEPENDS_ON {version: r[1]}]->(p)
-		)` : ""  + `
+		)` : "")  + `
 		RETURN a`;
 		const resultPromise = session.run(
 			string,
@@ -116,7 +116,7 @@ const padTo50 = str => {
 			procEnd();
 		}).catch(e => {
 			numErrors ++;
-			console.error(chalk.bgRedBright("\n\n================ COULD NOT UPLOAD, FAILED WITH ERROR: ================\n"), e, chalk.bgRedBright("\nQUERY"), string, chalk.bgRedBright("\nMODULE"), obj);
+			console.error(chalk.bgRedBright("\n\n================ COULD NOT UPLOAD, FAILED WITH ERROR: ================\n"), e, chalk.bgRedBright("\nQUERY"), string, chalk.bgRedBright("\nMODULE"), obj, module);
 			procEnd();
 		});
 
