@@ -92,15 +92,18 @@ const padTo50 = str => {
 		const setString = propertiesUsed.reduce((acc, prop) => `${acc}a.${prop} = $${prop},` , "").slice(0, -1);
 
 		const mostRecentVersion = module.versions[(module["dist-tags"] && module["dist-tags"].latest) || Object.keys(module.versions).slice(-1)[0]];
+		if(!mostRecentVersion) return;
 		const dependencies = mostRecentVersion.dependencies ? Object.entries(mostRecentVersion.dependencies) : [];
 		obj.dependencies = dependencies;
 
 		//module.maintainers.forEach();
 
 		const string = `MERGE (a:Package { name: $name }) SET ${setString}
-		` + dependencies.length ? `FOREACH (r IN $dependencies |
+		` + dependencies.length ? `
+		WITH a as a
+		FOREACH (r IN $dependencies |
 			MERGE (p:Package { name : r[0] })
-			MERGE (a)-[:DEPENDS_ON {version: r[1]}]->(p)
+			CREATE (a)-[e:DEPENDS_ON {version: r[1]}]->(p)
 		)` : ""  + `
 		RETURN a`;
 		const resultPromise = session.run(
