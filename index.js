@@ -26,7 +26,7 @@ const properties = [
 	"description",
 	"homepage",
 	"keywords",
-	"license",
+	[data => data.license && data.license.type, "license"],
 	"name",
 	[data => data.repository && data.repository.url, "repository"],
 	[data => data.repository && data.repository.type, "repositoryType"],
