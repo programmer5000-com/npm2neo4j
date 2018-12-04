@@ -3,10 +3,11 @@ process.on('warning', e => console.warn(e.stack));
 const fetch = require("node-fetch");
 const neo4j = require("neo4j-driver").v1;
 const config = require("./config.json");
-const MAX_LINES = config.max_lines || Infinity;
+const MAX_LINES = config.max_lines > 0 ? config.max_lines : Infinity;
 const driver = neo4j.driver(config.url, neo4j.auth.basic(config.username, config.password), {disableLosslessIntegers: true});
 const session = driver.session();
 let numOpen = 0;
+let done = false;
 
 const properties = [
 	[data => data.users || (data.maintainers && data.maintainers[0] && data.maintainers[0].name), "author"],
@@ -34,7 +35,7 @@ const properties = [
 		if(!firstLine) return firstLine = true;
 		count ++;
 		if(count > MAX_LINES){
-		  session.close();
+			done = true;
 			return;
 		}
 
@@ -84,7 +85,7 @@ RETURN a`;
 		resultPromise.then(result => {
 		  const singleRecord = result.records[0];
 		  const node = singleRecord.get(0);
-		  console.log("Uploaded", node, "for package", moduleName);
+		  console.log("Uploaded package", moduleName);
 			procEnd();
 		}).catch(e => {
 			console.error(e, string, obj, module.keywords);
@@ -92,7 +93,9 @@ RETURN a`;
 		});
 
 		const procEnd = () => {
-			if(numOpen === 1){
+			if(numOpen === 1 && done){
+				console.log("done!");
+				session.close();
 				driver.close();
 				setImmediate(process.exit);
 			}
@@ -112,5 +115,8 @@ RETURN a`;
 
 		lineBuffer = data.slice(-1)[0];
 	});
-	stream.on("close", () => procLine(lineBuffer));
+	stream.on("close", () => {
+		done = true;
+		procLine(lineBuffer);
+	});
 })();
