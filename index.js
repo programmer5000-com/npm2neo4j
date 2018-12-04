@@ -1,21 +1,23 @@
-process.on('warning', e => console.warn(e.stack));
+process.on("warning", e => console.warn(e.stack));
 
 const fetch = require("node-fetch");
 const chalk = require("chalk");
 const neo4j = require("neo4j-driver").v1;
 const config = require("./config.json");
-const MAX_LINES = config.max_lines > 0 ? config.max_lines : Infinity;
+const maxLines = config.max_lines > 0 ? config.max_lines : Infinity;
+const timeout = config.timeoutMultiplier || 50;
 const driver = neo4j.driver(config.url, neo4j.auth.basic(config.username, config.password), {disableLosslessIntegers: true});
 const session = driver.session();
 let numOpen = 0;
 let done = false;
+let closed = false;
 
 // metrics
 let numUploaded = 0;
 let numErrors = 0;
 let lastUploadStart = "";
 let lastUploaded = "";
-
+let waiting = 0;
 
 const properties = [
 	[data => data.users || (data.maintainers && data.maintainers[0] && data.maintainers[0].name), "author"],
@@ -31,7 +33,6 @@ const properties = [
 ];
 
 (async function (){
-	let backlog = [];
 	const log = (...stuff) => {
 		console.log(...stuff);
 	};
@@ -47,22 +48,25 @@ const properties = [
 	const procLine = line => {
 		if(!firstLine) return firstLine = true;
 		linesRead ++;
-		if(linesRead > MAX_LINES){
+		if(linesRead > maxLines){
 			done = true;
 			return;
 		}
 
 		if(line[line.length - 1] === ","){
-			numOpen ++;
+			waiting ++;-
 			line = line.slice(0, -1);
 			const module = JSON.parse(line);
-			moduleName = module.key;
-			downloadModule(moduleName).catch(console.error);
+			const moduleName = module.key;
+			console.log("Upload start", moduleName);
+			setTimeout(() => downloadModule(moduleName).catch(console.error), linesRead * timeout);
 		}
 	};
 
 	const downloadModule = async function (moduleName){
-		log("processing module", moduleName);
+		waiting --;
+		numOpen ++;
+		log("Processing package");
 		lastUploadStart = moduleName;
 		const resp = await fetch("https://skimdb.npmjs.com/registry/" + encodeURIComponent(moduleName));
 		const module = await resp.json();
@@ -74,7 +78,7 @@ const properties = [
 			const key = typeof property === "string" ? property : (property[1] || property[0]);
 			const preValue = typeof property === "string" ? property : property[0];
 			const value = typeof preValue === "function" ? preValue(module) : module[preValue];
-			if(value && (!value instanceof Array || value.length)){
+			if(value && (!(value instanceof Array) || value.length)){
 				obj[key] = value;
 				propertiesUsed.push(typeof property === "string" ? property : property[1] || property[0]);
 			}
@@ -89,17 +93,15 @@ const properties = [
 		//module.maintainers.forEach();
 
 		const string = `MERGE (a:Package { name: $name }) SET ${setString}
-FOREACH (r IN $dependencies |
-	MERGE (a)-[:DEPENDS_ON {version: r[1]}]->(:Package { name : r[0] })
-)
-RETURN a`;
+		` + dependencies.length ? `FOREACH (r IN $dependencies |
+			MERGE (a)-[:DEPENDS_ON {version: r[1]}]->(:Package { name : r[0] })
+		)` : ""  + `
+		RETURN a`;
 		const resultPromise = session.run(
-		  string,
-		  obj);
+			string,
+			obj);
 		Promise.race([resultPromise, new Promise((_, reject) => setTimeout(() => reject("timeout"), 15000))]).then(result => {
-		  const singleRecord = result.records[0];
-		  const node = singleRecord.get(0);
-		  log("Uploaded package", moduleName);
+			log("Uploaded package", moduleName);
 			lastUploaded = moduleName;
 			numUploaded ++;
 			procEnd();
@@ -135,11 +137,23 @@ RETURN a`;
 	});
 	stream.on("close", () => {
 		procLine(lineBuffer);
+		closed = true;
 		done = true;
 	});
 
 	const showStatus = () => {
-		const line = chalk`{bold {gray ${(new Date).toString()}}\tErrors: {red ${numErrors}}\tUploaded: {green ${numUploaded}}\tUploading: {cyan ${numOpen}}\tLines read: {magenta ${linesRead}}\tMost recent upload started: {blue ${lastUploadStart}}\tMost recent successful upload: {yellow ${lastUploaded}}}`;
+		let etaMs;
+		if(maxLines !== undefined){
+			etaMs = (numUploaded / maxLines) * timeout;
+		}else if(closed){
+			etaMs = (numUploaded / (numOpen + numUploaded)) * timeout;
+		}
+		const date = new Date;
+		if(etaMs) date.setMilliseconds(date.getMilliseconds() + etaMs);
+
+		const eta = etaMs ? date : "unknown";
+
+		const line = chalk`{bold {gray ${(new Date).toString()}}\tErrors: {red ${numErrors}}\tUploaded: {green ${numUploaded}}\tUploading: {cyan ${numOpen}}\tWaiting: {yellow ${waiting}}\tLines read: {magenta ${linesRead}}\tMost recent upload started: {blue ${lastUploadStart}}\tMost recent successful upload: {yellow ${lastUploaded}}\tETA: ${eta}}`;
 		console.error(line);
 	};
 
