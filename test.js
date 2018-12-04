@@ -1,2 +1,6 @@
 const fscache = require("./fscache.js");
-fscache.init().then(() => fscache.getFileLocation(process.argv[2] || "helloworld"));
+(async () => {
+	await fscache.init();
+	await fscache.writeJSON(process.argv[2] || "helloworld", {hello: "world"});
+	
+})();

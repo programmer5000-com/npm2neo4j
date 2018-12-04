@@ -35,17 +35,25 @@ const getFileLocation = async file => {
 	}
 	filePath += str + fileExtension;
 	filePath = path.join(prefix, filePath);
-	console.log("filepath", filePath, "str", str, "arr", arr);
+	return filePath;
 };
 exports.getFileLocation = getFileLocation;
 
 const readJSON = async file => {
 	const location = await getFileLocation(file);
-	return require(location);
+	try{
+		return require(location);
+	}catch(e){
+		return undefined;
+	}
 };
+exports.readJSON = readJSON;
 
 const writeJSON = async (file, json) => {
 	if(typeof json !== "string") json = JSON.stringify(json);
 	const location = await getFileLocation(file);
-	return writeFilePromise(location, json);
+	console.log(location);
+	await writeFilePromise(location, json);
+	return;
 };
+exports.writeJSON = writeJSON;
