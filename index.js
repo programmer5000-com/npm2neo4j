@@ -31,6 +31,8 @@ const properties = [
 		if(!firstLine) return firstLine = true;
 		count ++;
 		if(count > MAX_LINES){
+		  session.close();
+			driver.close();
 			return;
 		}
 
@@ -77,7 +79,6 @@ RETURN a`;
 		  string,
 		  obj);
 		resultPromise.then(result => {
-		  // session.close();
 		  const singleRecord = result.records[0];
 		  const node = singleRecord.get(0);
 		  console.log("Uploaded", node, "for package", moduleName);

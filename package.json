@@ -1,0 +1,26 @@
+{
+  "name": "npm2neo4j",
+  "version": "1.0.0",
+  "description": "Get a list of all NPM modules &amp; put it into a neo4j database",
+  "main": "index.js",
+  "dependencies": {
+    "neo4j-driver": "^1.7.2",
+    "node-fetch": "^2.3.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+		"start": "node delete_all.js && node ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://programmer5000-com@github.com/programmer5000-com/npm2neo4j.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "AGPL-3.0",
+  "bugs": {
+    "url": "https://github.com/programmer5000-com/npm2neo4j/issues"
+  },
+  "homepage": "https://github.com/programmer5000-com/npm2neo4j#readme"
+}
