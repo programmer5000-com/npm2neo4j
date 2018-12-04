@@ -4,7 +4,18 @@ const neo4j = require("neo4j-driver").v1;
 const driver = neo4j.driver("bolt://52.23.245.35:34519", neo4j.auth.basic("neo4j", "component-implementation-fence"), {disableLosslessIntegers: true});
 const session = driver.session();
 
-const properties = [[data => data.users || (data.maintainers && data.maintainers[0] && data.maintainers[0].name), "author"], ["bugs.url", "bugs"], "description", "homepage", "keywords", "license", "name", ["repository", "repository.url"], ["repositoryType", "repository.type"], [data => data.users && Object.keys(data.users), "users"]];
+const properties = [
+	[data => data.users || (data.maintainers && data.maintainers[0] && data.maintainers[0].name), "author"],
+	[data => data.bugs && data.bugs.url, "bugs"],
+	"description",
+	"homepage",
+	"keywords",
+	"license",
+	"name",
+	[data => data.repository && data.repository.url, "repository"],
+	[data => data.repository && data.repository.type, "repositoryType"],
+	[data => data.users && Object.keys(data.users), "users"]
+];
 
 (async function (){
 	console.log("starting...");
@@ -41,13 +52,13 @@ const properties = [[data => data.users || (data.maintainers && data.maintainers
 			const key = typeof property === "string" ? property : (property[1] || property[0]);
 			const preValue = typeof property === "string" ? property : property[0];
 			const value = typeof preValue === "function" ? preValue(module) : module[preValue];
-			if(value){
+			if(value && (!value instanceof Array || value.length)){
 				obj[key] = value;
 				propertiesUsed.push(typeof property === "string" ? property : property[1] || property[0]);
 			}
 		});
 
-		const setString = propertiesUsed.reduce((acc, prop) => `${acc}a.${prop} = ${prop},` , "").slice(0, -1);
+		const setString = propertiesUsed.reduce((acc, prop) => `${acc}a.${prop} = $${prop},` , "").slice(0, -1);
 
 		//module.maintainers.forEach();
 
@@ -57,11 +68,12 @@ const properties = [[data => data.users || (data.maintainers && data.maintainers
 		  string,
 		  obj);
 		resultPromise.then(result => {
-			console.log("\n".repeat(100));
-		  session.close();
+		  // session.close();
 		  const singleRecord = result.records[0];
-		  const greeting = singleRecord.get(0);
-		  console.log(greeting);
+		  const node = singleRecord.get(0);
+		  console.log(node);
+		}).catch(e => {
+			console.error(e, string, obj, module.keywords);
 		});
 	};
 
