@@ -43,7 +43,7 @@ const padTo50 = str => {
 
 	log("starting...");
 	let lineBuffer = "";
-	const resp = await fetch("https://skimdb.npmjs.com/registry/_all_docs");
+	const resp = await fetch("https://skimdb.npmjs.com/registry/_all_docs", {retry: {retries: 5}});
 	log("fetched");
 	const stream = resp.body;
 
@@ -72,7 +72,7 @@ const padTo50 = str => {
 		numOpen ++;
 		log("Processing package", moduleName);
 		lastUploadStart = moduleName;
-		const resp = await fetch("https://skimdb.npmjs.com/registry/" + encodeURIComponent(moduleName));
+		const resp = await fetch("https://skimdb.npmjs.com/registry/" + encodeURIComponent(moduleName), {retry: {retries: 5}});
 		const module = await resp.json();
 
 		const obj = {};
