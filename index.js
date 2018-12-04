@@ -30,19 +30,20 @@ const properties = [
 	const procLine = line => {
 		if(!firstLine) return firstLine = true;
 		count ++;
-		if(count > MAX_LINES) return;
+		if(count > MAX_LINES){
+			return;
+		}
 
 		if(line[line.length - 1] === ","){
 			line = line.slice(0, -1);
 			const module = JSON.parse(line);
 			moduleName = module.key;
-			console.log(moduleName);
 			downloadModule(moduleName).catch(console.error);
 		}
 	};
 
 	const downloadModule = async function (moduleName){
-		console.log(moduleName);
+		console.log("processing module", moduleName);
 		const resp = await fetch("https://skimdb.npmjs.com/registry/" + encodeURIComponent(moduleName));
 		const module = await resp.json();
 
@@ -61,10 +62,17 @@ const properties = [
 
 		const setString = propertiesUsed.reduce((acc, prop) => `${acc}a.${prop} = $${prop},` , "").slice(0, -1);
 
+		const mostRecentVersion = module.versions[(module["dist-tags"] && module["dist-tags"].latest) || Object.keys(module.versions).slice(-1)[0]];
+		const dependencies = mostRecentVersion.dependencies ? Object.entries(mostRecentVersion.dependencies) : [];
+		obj.dependencies = dependencies;
+
 		//module.maintainers.forEach();
 
-		const string = 'CREATE (a:Package) SET ' + setString + ' RETURN a';
-		console.log(string, obj);
+		const string = `MERGE (a:Package { name: $name }) SET ${setString}
+FOREACH (r IN $dependencies |
+	MERGE (a)-[:DEPENDS_ON {version: r[1]}]->(:Package { name : r[0] })
+)
+RETURN a`;
 		const resultPromise = session.run(
 		  string,
 		  obj);
@@ -72,7 +80,7 @@ const properties = [
 		  // session.close();
 		  const singleRecord = result.records[0];
 		  const node = singleRecord.get(0);
-		  console.log(node);
+		  console.log("Uploaded", node, "for package", moduleName);
 		}).catch(e => {
 			console.error(e, string, obj, module.keywords);
 		});
