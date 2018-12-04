@@ -1,6 +1,6 @@
 process.on("warning", e => console.warn(e.stack));
 
-const fetch = require("node-fetch");
+const fetch = require("@zeit/fetch-retry")(require("node-fetch"));
 const chalk = require("chalk");
 const neo4j = require("neo4j-driver").v1;
 const config = require("./config.json");

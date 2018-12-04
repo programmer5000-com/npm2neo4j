@@ -5,6 +5,7 @@
   "main": "index.js",
   "dependencies": {
     "chalk": "^2.4.1",
+    "fetch-retry": "^2.0.0",
     "neo4j-driver": "^1.7.2",
     "node-fetch": "^2.3.0"
   },
