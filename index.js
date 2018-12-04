@@ -1,6 +1,7 @@
 process.on("warning", e => console.warn(e.stack));
 
 const fetch = require("@zeit/fetch-retry")(require("node-fetch"));
+const fetchConfig = {headers: {"User-Agent": "npm2neo4j (+ @programmer5000 here. Sorry if this is doing too many requests. https://github.com/programmer5000-com/npm2neo4j)"}, retry: {retries: 5}};
 const chalk = require("chalk");
 const neo4j = require("neo4j-driver").v1;
 const config = require("./config.json");
@@ -43,7 +44,7 @@ const padTo50 = str => {
 
 	log("starting...");
 	let lineBuffer = "";
-	const resp = await fetch("https://skimdb.npmjs.com/registry/_all_docs", {retry: {retries: 5}});
+	const resp = await fetch("https://skimdb.npmjs.com/registry/_all_docs", fetchConfig);
 	log("fetched");
 	const stream = resp.body;
 
@@ -72,7 +73,7 @@ const padTo50 = str => {
 		numOpen ++;
 		log("Processing package", moduleName);
 		lastUploadStart = moduleName;
-		const resp = await fetch("https://skimdb.npmjs.com/registry/" + encodeURIComponent(moduleName), {retry: {retries: 5}});
+		const resp = await fetch("https://skimdb.npmjs.com/registry/" + encodeURIComponent(moduleName), fetchConfig);
 		const module = await resp.json();
 
 		const obj = {};
