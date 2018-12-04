@@ -1,3 +1,5 @@
+const fetch = require("@zeit/fetch-retry")(require("node-fetch"));
+const fetchConfig = {headers: {"User-Agent": "npm2neo4j (+ @programmer5000 here. Sorry if this is doing too many requests. https://github.com/programmer5000-com/npm2neo4j)"}, retry: {retries: 5}};
 const path = require("path");
 const fs = require("fs");
 const util = require("util");
@@ -43,7 +45,6 @@ const readJSON = async file => {
 	try{
 		return JSON.parse((await readFilePromise(location)).toString());
 	}catch(e){
-		console.error(e);
 		return undefined;
 	}
 };
@@ -56,3 +57,15 @@ const writeJSON = async (file, json) => {
 	return;
 };
 exports.writeJSON = writeJSON;
+
+const getModule = async (moduleName) => {
+	let hit = true;// or miss?
+	let data = await readJSON(moduleName);
+	if(!data){
+		hit = false;
+		data = await((await fetch("https://skimdb.npmjs.com/registry/", fetchConfig)).json());
+		writeJSON(moduleName, data);
+	}
+	return {data, cacheHit: hit};
+};
+exports.getModule = getModule;
