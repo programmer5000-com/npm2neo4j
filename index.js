@@ -54,7 +54,7 @@ const properties = [
 		}
 
 		if(line[line.length - 1] === ","){
-			waiting ++;-
+			waiting ++;
 			line = line.slice(0, -1);
 			const module = JSON.parse(line);
 			const moduleName = module.key;
@@ -100,7 +100,7 @@ const properties = [
 		const resultPromise = session.run(
 			string,
 			obj);
-		Promise.race([resultPromise, new Promise((_, reject) => setTimeout(() => reject("timeout"), 15000))]).then(result => {
+		Promise.race([resultPromise, new Promise((_, reject) => setTimeout(() => reject("timeout"), 15000))]).then(() => {
 			log("Uploaded package", moduleName);
 			lastUploaded = moduleName;
 			numUploaded ++;
