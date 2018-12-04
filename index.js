@@ -32,6 +32,10 @@ const properties = [
 	[data => data.users && Object.keys(data.users), "users"]
 ];
 
+const padTo50 = str => {
+	return (str + " ".repeat(Math.max(50 - str.length, 0))).slice(0, 50);
+};
+
 (async function (){
 	const log = (...stuff) => {
 		console.log(...stuff);
@@ -47,11 +51,11 @@ const properties = [
 	let linesRead = 0;
 	const procLine = line => {
 		if(!firstLine) return firstLine = true;
-		linesRead ++;
-		if(linesRead > maxLines){
+		if(linesRead >= maxLines){
 			done = true;
 			return;
 		}
+		linesRead ++;
 
 		if(line[line.length - 1] === ","){
 			waiting ++;
@@ -123,7 +127,8 @@ const properties = [
 		};
 	};
 
-	stream.on("data", data => {
+	const procData = data => {
+		if(done) return stream.removeListener("data", procData);
 		if(!data) return;
 		data = data.toString();
 		if(!data) return;
@@ -134,7 +139,8 @@ const properties = [
 		data.slice(0, -1).forEach(procLine);
 
 		lineBuffer = data.slice(-1)[0];
-	});
+	};
+	stream.on("data", procData);
 	stream.on("close", () => {
 		procLine(lineBuffer);
 		closed = true;
@@ -144,16 +150,16 @@ const properties = [
 	const showStatus = () => {
 		let etaMs;
 		if(maxLines !== undefined){
-			etaMs = (numUploaded / maxLines) * timeout;
+			etaMs = (maxLines - numUploaded) * timeout;
 		}else if(closed){
-			etaMs = (numUploaded / (numOpen + numUploaded)) * timeout;
+			etaMs = (numOpen + numUploaded - numUploaded) * timeout;
 		}
 		const date = new Date;
 		if(etaMs) date.setMilliseconds(date.getMilliseconds() + etaMs);
 
 		const eta = etaMs ? date : "unknown";
 
-		const line = chalk`{bold {gray ${(new Date).toString()}}\tErrors: {red ${numErrors}}\tUploaded: {green ${numUploaded}}\tUploading: {cyan ${numOpen}}\tWaiting: {yellow ${waiting}}\tLines read: {magenta ${linesRead}}\tMost recent upload started: {blue ${lastUploadStart}}\tMost recent successful upload: {yellow ${lastUploaded}}\tETA: ${eta}}`;
+		const line = chalk`{bold {gray ${(new Date).toString()}}\tErrors: {red ${numErrors}}\tUploaded: {green ${numUploaded}/${maxLines}}\tUploading: {cyan ${numOpen}}\tWaiting: {yellow ${waiting}}\tLines read: {magenta ${linesRead}/${maxLines}}\tMost recent upload started: {blue ${padTo50(lastUploadStart)}}\tMost recent successful upload: {yellow ${padTo50(lastUploaded)}}\tETA: ${eta}}`;
 		console.error(line);
 	};
 
