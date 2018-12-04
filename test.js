@@ -1,2 +1,2 @@
 const fscache = require("./fscache.js");
-fscache.getFile("helloworld");
+fscache.init().then(() => fscache.getFileLocation(process.argv[2] || "helloworld"));

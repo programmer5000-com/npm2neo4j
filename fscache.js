@@ -2,33 +2,50 @@ const path = require("path");
 const fs = require("fs");
 const util = require("util");
 const mkdirPromise = util.promisify(fs.mkdir);
-const statsPromise = util.promisify(fs.stat);
+const writeFilePromise = util.promisify(fs.writeFile);
 
-const num = 2;
+const numSubfolders = 2;
+const fileExtension = ".json";
+const prefix = "cache";
 const procString = (str) => {
 	let arr = [];
-	for(let i = 0; i < num; i++){
-		if(num > str.length) break;
-		arr.push(str.slice(0, num));
-		str = str.slice(num);
+	for(let i = 0; i < numSubfolders; i++){
+		if(numSubfolders > str.length) break;
+		arr.push(str.slice(0, numSubfolders));
+		str = str.slice(numSubfolders);
 	}
 	return {arr, str};
 };
-const undoString = (path) => path.slice(0, -5).replace(/[\/\\]+/g, "");
+const undoString = (path) => path.slice(0, -5).replace(/[/\\]+/g, "");
 
 const eexist = e => e.code === "EEXIST" ? Promise.resolve() : Promise.reject(e);
+const init = async () => {
+	await mkdirPromise(prefix).catch(eexist);
+};
+exports.init = init;
 
-const getFile = async file => {
+const getFileLocation = async file => {
 	const {arr, str} = procString(file);
 	let filePath = "";
 	for(let i = 0; i < arr.length ; i ++){
 		console.log(arr[i], path.sep);
 		const folder = filePath + arr[i] + path.sep;
 		await mkdirPromise(folder).catch(eexist);
-		filePath += folder;
+		filePath = folder;
 	}
+	filePath += str + fileExtension;
+	filePath = path.join(prefix, filePath);
+	console.log("filepath", filePath, "str", str, "arr", arr);
+};
+exports.getFileLocation = getFileLocation;
 
-	console.log(filePath + str);
+const readJSON = async file => {
+	const location = await getFileLocation(file);
+	return require(location);
 };
 
-exports.getFile = getFile;
+const writeJSON = async (file, json) => {
+	if(typeof json !== "string") json = JSON.stringify(json);
+	const location = await getFileLocation(file);
+	return writeFilePromise(location, json);
+};
