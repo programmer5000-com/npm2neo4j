@@ -99,7 +99,8 @@ const padTo50 = str => {
 
 		const string = `MERGE (a:Package { name: $name }) SET ${setString}
 		` + dependencies.length ? `FOREACH (r IN $dependencies |
-			MERGE (a)-[:DEPENDS_ON {version: r[1]}]->(:Package { name : r[0] })
+			MERGE (p:Package { name : r[0] })
+			MERGE (a)-[:DEPENDS_ON {version: r[1]}]->(p)
 		)` : ""  + `
 		RETURN a`;
 		const resultPromise = session.run(
