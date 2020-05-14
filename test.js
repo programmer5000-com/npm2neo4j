@@ -1,7 +1,36 @@
 const rimraf = require("rimraf");
 const rmrf = folder => new Promise((resolve, reject) => rimraf(folder, {}, err => err ? reject(err) : resolve()));
 const fscache = require("./fscache.js");
+const fetch = require("node-fetch");
+
+const {AbortController} = require("abort-controller");
+
+const controller = new AbortController();
+const timeout = setTimeout(
+	() => { controller.abort(); },
+	150,
+);
+
+
 (async () => {
+
+	// fetch("http://httpbin.org/delay/10", { signal: controller.signal })
+	// 	.then(res => res.json())
+	// 	.then(
+	// 		data => {
+	// 			useData(data)
+	// 		},
+	// 		err => {
+	// 			if (err.name === "AbortError") {
+	// 				// request was aborted
+	// 			}
+	// 		},
+	// 	)
+	// 	.finally(() => {
+	// 		clearTimeout(timeout);
+	// 	});
+
+
 	await rmrf("cache");
 
 	console.time("init");

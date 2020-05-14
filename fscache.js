@@ -59,12 +59,12 @@ const writeJSON = async (file, json) => {
 exports.writeJSON = writeJSON;
 
 const getModule = async (moduleName) => {
-	let hit = true;// or miss?
-	let data = await readJSON(moduleName);
+	let hit = true;
+	let data = await readJSON(encodeURIComponent(moduleName));
 	if(!data){
 		hit = false;
-		data = await((await fetch("https://skimdb.npmjs.com/registry/", fetchConfig)).json());
-		writeJSON(moduleName, data);
+		data = await((await fetch("https://skimdb.npmjs.com/registry/" + encodeURIComponent(moduleName), fetchConfig)).json());
+		writeJSON(encodeURIComponent(moduleName), data);
 	}
 	return {data, cacheHit: hit};
 };
